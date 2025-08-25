@@ -306,6 +306,15 @@ document.addEventListener("mouseup", () => {
   }
 });
 </script>
+<script>
+  const menuToggle = document.getElementById("menuToggle");
+  const mobileMenu = document.getElementById("mobileMenu");
+
+  menuToggle.addEventListener("click", () => {
+    mobileMenu.classList.toggle("hidden");
+  });
+</script>
+
 <!-- ✅ Single Unified Footer -->
 <!-- ✅ Optimized Unified Footer -->
 <footer class="bg-green-900 text-white py-10 px-6 md:px-12 mt-12">
