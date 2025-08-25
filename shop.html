@@ -1,4 +1,4 @@
-
+  
 
 <!DOCTYPE html>
 <html lang="en">
@@ -82,181 +82,39 @@
   </section>
 
   <!-- Scripts -->
-  <script>
-   async function fetchProducts() {
-  const sheetId = "1Bg2mCkQnmSoqID4O7chRvR8kaCA5sTyW_VtM1ocKEto";  
-  const url = `https://opensheet.elk.sh/${sheetId}/1`; // first sheet/tab
+<!-- Product Grid -->
+<div id="shopProductList" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 p-4"></div>
 
-  try {
-    const response = await fetch(url);  // ✅ FIXED
-    const products = await response.json();
-    displayProducts(products);
-  } catch (err) {
-    console.error("Error fetching products:", err);
-    document.getElementById("shopProductList").innerHTML =
-      "<p class='text-red-500'>Failed to load products.</p>";
-  }
-}
-
-
-    function displayProducts(products) {
-      const container = document.getElementById("shopProductList");
-      container.innerHTML = "";
-
-      if (!products || products.length === 0) {
-        container.innerHTML = "<p class='text-gray-600'>No products available yet.</p>";
-        return;
-      }
-
-      products.forEach(p => {
-        // Convert Google Drive links → direct image
-        let imgUrl = "placeholder.jpg";
-        if (p.ImageLink) {
-          const match = p.ImageLink.match(/[-\w]{25,}/);
-          imgUrl = match 
-            ? `https://drive.google.com/uc?export=view&id=11wj0fbbDxz61sLpIhxtiFvMvMNTgJO9V =${match[0]}`
-            : p.ImageLink;
-        }
-
-        container.innerHTML += `
-          <div class="bg-white rounded-xl shadow hover:shadow-lg transition p-4">
-            <img src="https://drive.google.com/uc?export=view&id=11wj0fbbDxz61sLpIhxtiFvMvMNTgJO9V " alt="${p.Name}" class="rounded-lg mb-3 w-full h-48 object-cover">
-            <h3 class="font-semibold text-lg">KAVNUI</h3>
-            <p class="text-gray-600 text-sm mb-2">${p.Description || ""}</p>
-            <p class="text-green-700 font-bold">₹${p.Price || ""}</p>
-            <button class="mt-3 w-full bg-green-700 text-white py-2 rounded-lg hover:bg-green-800">
-              Add to Cart
-            </button>
-          </div>
-        `;
-      });
-    }
-
-    // Mobile menu
-    const menuToggle = document.getElementById("menuToggle");
-    const mobileMenu = document.getElementById("mobileMenu");
-    menuToggle.addEventListener("click", () => {
-      mobileMenu.classList.toggle("scale-y-0");
-      mobileMenu.classList.toggle("opacity-0");
-      mobileMenu.classList.toggle("flex");
-    });
-
-    // Load on page start
-    fetchProducts();
-  </script>
-  <script>
-  function displayProducts(products) {
-    const container = document.getElementById("shopProductList");
-    container.innerHTML = "";
-
-    if (!products || products.length === 0) {
-      container.innerHTML = "<p class='text-gray-600'>No products available yet.</p>";
-      return;
-    }
-
-    products.forEach((p, index) => {
-      // Handle multiple Google Drive images
-      let imgUrls = [];
-      if (p.ImageLink) {
-        const links = p.ImageLink.split(/\s+/); // split by space/newline
-        links.forEach(link => {
-          const match = link.match(/[-\w]{25,}/);
-          if (match) {
-            imgUrls.push(`https://drive.google.com/uc?export=view&id=${match[0]}`);
-          }
-        });
-      }
-      if (imgUrls.length === 0) imgUrls = ["placeholder.jpg"];
-
-      // Short description (preview only)
-      const shortDesc = (p.Description && p.Description.length > 200) 
-        ? p.Description.substring(0, 200) + "..." 
-        : (p.Description || "");
-
-      // Build product card
-      container.innerHTML += `
-        <div class="bg-white rounded-xl shadow hover:shadow-lg transition p-4">
-          <img src="${imgUrls[0]}" alt="${p.Name}" 
-               class="rounded-lg mb-3 w-full h-48 object-cover">
-          <h3 class="font-semibold text-lg">${p.Name}</h3>
-          <p class="text-gray-600 text-sm mb-2">${shortDesc}</p>
-          <p class="text-green-700 font-bold">₹${p.Price || ""}</p>
-          <div class="flex gap-2 mt-3">
-            <button onclick="openModal(${index})" 
-              class="flex-1 bg-green-700 text-white py-2 rounded-lg hover:bg-green-800">
-              View More
-            </button>
-            <button class="flex-1 bg-yellow-600 text-white py-2 rounded-lg hover:bg-yellow-700">
-              Add to Cart
-            </button>
-          </div>
-        </div>
-
-        <!-- Modal -->
-        <div id="modal-${index}" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-          <div class="bg-white rounded-xl shadow-lg max-w-2xl w-full p-6 relative">
-            <button onclick="closeModal(${index})" 
-              class="absolute top-2 right-2 text-gray-600 hover:text-black text-2xl">&times;</button>
-            
-            <h3 class="text-xl font-bold mb-4">${p.Name}</h3>
-            
-            <!-- Image Gallery -->
-            <div class="flex gap-2 overflow-x-auto mb-4">
-              ${imgUrls.map(url => `<img src="${url}" class="w-40 h-40 object-cover rounded">`).join("")}
-            </div>
-
-            <!-- Full Description -->
-            <div class="text-gray-700 whitespace-pre-line max-h-96 overflow-y-auto">
-              ${p.Description || ""}
-            </div>
-
-            <p class="text-green-700 font-bold mt-4">₹${p.Price || ""}</p>
-          </div>
-        </div>
-      `;
-    });
-  }
-
-  function openModal(index) {
-    document.getElementById(`modal-${index}`).classList.remove("hidden");
-    document.getElementById(`modal-${index}`).classList.add("flex");
-  }
-
-  function closeModal(index) {
-    document.getElementById(`modal-${index}`).classList.remove("flex");
-    document.getElementById(`modal-${index}`).classList.add("hidden");
-  }
-</script>
 <script>
 const products = [
   {
-    Name: "Organic Tomatoes",
-    Price: "120",
-    Description: "Fresh, juicy organic tomatoes straight from the farm.",
+    Name: "Super Food Health Mix",
+    Price: "250",
+    Description: "A nutrient-rich blend of grains, millets, and pulses for daily health and energy.",
     ImageLink: "https://drive.google.com/uc?export=view&id=11wj0fbbDxz61sLpIhxtiFvMvMNTgJO9V"
   },
   {
-    Name: "Farm Fresh Carrots",
-    Price: "80",
-    Description: "Crunchy and sweet carrots, grown naturally.",
+    Name: "Quinoa Millet",
+    Price: "300",
+    Description: "Gluten-free, protein-packed millet alternative perfect for healthy meals.",
     ImageLink: "https://drive.google.com/uc?export=view&id=1scDmMvCiCnTH-u6XmGLRRe1iMr4vCucx"
   },
   {
-    Name: "Organic Onions",
-    Price: "100",
-    Description: "Pesticide-free onions with rich flavor.",
+    Name: "Karuppu Kavuni (Black Rice)",
+    Price: "280",
+    Description: "Traditional black rice with rich antioxidants, perfect for desserts and meals.",
     ImageLink: "https://drive.google.com/uc?export=view&id=1SX0bUb5jEjd1LQR5WmuQ7nccIJVI4tUF"
   },
   {
-    Name: "Organic Apples",
-    Price: "220",
-    Description: "Crisp and sweet apples, naturally grown.",
+    Name: "Purple Hair Oil",
+    Price: "150",
+    Description: "Herbal hair oil for strong, healthy, and shiny hair with natural ingredients.",
     ImageLink: "https://drive.google.com/uc?export=view&id=1z-0lNq5BL_FEAEzM99lPw3Famz4t0vaT"
   },
   {
-    Name: "Organic Green Chillies",
-    Price: "60",
-    Description: "Spicy green chillies for everyday cooking.",
+    Name: "Kodo Millet (Varagu)",
+    Price: "200",
+    Description: "Nutritious millet, high in fiber and ideal for weight management.",
     ImageLink: "https://drive.google.com/uc?export=view&id=198Yau1w_KDENKhesICYwNe7u7RFTh2SJ"
   }
 ];
@@ -265,50 +123,32 @@ function displayProducts(products) {
   const container = document.getElementById("shopProductList");
   container.innerHTML = "";
 
-  if (!products || products.length === 0) {
-    container.innerHTML = "<p class='text-gray-600'>No products available yet.</p>";
-    return;
-  }
-
   products.forEach((p, index) => {
-    // Use one image (for now)
-    let imgUrl = p.ImageLink || "placeholder.jpg";
-
-    const shortDesc = (p.Description && p.Description.length > 200) 
-      ? p.Description.substring(0, 200) + "..." 
-      : (p.Description || "");
-
     container.innerHTML += `
-      <div class="bg-white rounded-xl shadow hover:shadow-lg transition p-4">
-        <img src="${imgUrl}" alt="${p.Name}" 
-             class="rounded-lg mb-3 w-full h-48 object-cover">
+      <div class="bg-white rounded-xl shadow hover:shadow-lg transition p-4 flex flex-col">
+        <img src="${p.ImageLink}" alt="${p.Name}" 
+             class="rounded-lg mb-3 w-full h-48 object-cover cursor-pointer"
+             onclick="openModal(${index})">
         <h3 class="font-semibold text-lg">${p.Name}</h3>
-        <p class="text-gray-600 text-sm mb-2">${shortDesc}</p>
-        <p class="text-green-700 font-bold">₹${p.Price}</p>
-        <div class="flex gap-2 mt-3">
-          <button onclick="openModal(${index})" 
-            class="flex-1 bg-green-700 text-white py-2 rounded-lg hover:bg-green-800">
-            View More
-          </button>
-          <button class="flex-1 bg-yellow-600 text-white py-2 rounded-lg hover:bg-yellow-700">
-            Add to Cart
-          </button>
-        </div>
+        <p class="text-gray-600 text-sm flex-grow">${p.Description.substring(0, 60)}...</p>
+        <p class="text-green-700 font-bold mt-2">₹${p.Price}</p>
+        <button onclick="openModal(${index})" 
+          class="mt-3 w-full bg-green-700 text-white py-2 rounded-lg hover:bg-green-800">
+          View Product
+        </button>
       </div>
 
       <!-- Modal -->
       <div id="modal-${index}" 
-        class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-        <div class="bg-white rounded-xl shadow-lg max-w-2xl w-full p-6 relative">
+        class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 px-2">
+        <div class="bg-white rounded-xl shadow-lg w-full max-w-md sm:max-w-lg md:max-w-2xl p-6 relative overflow-y-auto max-h-[90vh]">
           <button onclick="closeModal(${index})" 
             class="absolute top-2 right-2 text-gray-600 hover:text-black text-2xl">&times;</button>
           
           <h3 class="text-xl font-bold mb-4">${p.Name}</h3>
-          <img src="${imgUrl}" class="w-full max-h-80 object-contain rounded mb-4">
-          <div class="text-gray-700 whitespace-pre-line max-h-96 overflow-y-auto">
-            ${p.Description}
-          </div>
-          <p class="text-green-700 font-bold mt-4">₹${p.Price}</p>
+          <img src="${p.ImageLink}" class="w-full max-h-72 object-contain rounded mb-4">
+          <p class="text-gray-700 whitespace-pre-line">${p.Description}</p>
+          <p class="text-green-700 font-bold mt-4 text-lg">₹${p.Price}</p>
         </div>
       </div>
     `;
