@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Auth - a2k organics</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- EmailJS SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+  <script>
+    (function(){
+      emailjs.init(RP2p_KInXrtFHCTOp); // Replace with your EmailJS public key
+    })();
+  </script>
+
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #d4fc79, #96e6a1);
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .auth-box {
+      background: white;
+      padding: 24px;
+      border-radius: 18px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+      text-align: center;
+      width: 100%;
+      max-width: 380px;
+      transition: transform 0.5s ease, opacity 0.5s ease;
+    }
+    .slide-in { transform: translateX(0); opacity: 1; }
+    .slide-out-left { transform: translateX(-100%); opacity: 0; }
+    .slide-out-right { transform: translateX(100%); opacity: 0; }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="bg-green-700 text-white px-6 py-4 shadow-md flex justify-between items-center">
+    <div class="flex items-center space-x-3">
+      <a href="index.html">
+        <img src="favicon-32x32.png" alt="logo" class="w-10 h-10 shadow-md">
+      </a>
+      <h1 class="text-xl md:text-2xl font-bold tracking-wide">a2korganics</h1>
+    </div>
+
+    <nav class="flex items-center space-x-5 text-sm font-semibold">
+      <a href="index.html" class="hover:text-yellow-300 transition">Home</a>
+      <span id="userInfo" class="hidden"></span>
+      <button id="logoutBtn" class="hidden px-3 py-1 bg-red-500 hover:bg-red-600 rounded-lg transition">
+        Logout
+      </button>
+    </nav>
+  </header>
+
+  <!-- Main Auth -->
+  <main class="flex flex-1 items-center justify-center p-4">
+    <div class="auth-box" id="formBox">
+      <h2 id="form-title" class="text-2xl font-bold text-green-700 mb-4">Login</h2>
+
+      <!-- Name field (only for signup) -->
+      <input type="text" id="name" placeholder="Full Name" style="display:none;"
+        class="w-full p-3 mb-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"/>
+
+      <input type="email" id="email" placeholder="Email" required
+        class="w-full p-3 mb-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"/>
+
+      <input type="password" id="password" placeholder="Password" required
+        class="w-full p-3 mb-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"/>
+
+      <input type="password" id="confirmPassword" placeholder="Confirm Password" style="display:none;"
+        class="w-full p-3 mb-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"/>
+
+      <button id="authBtn"
+        class="w-full bg-green-700 text-white font-semibold py-3 rounded-lg hover:bg-green-800 transition">
+        Login
+      </button>
+
+      <span class="toggle-link text-green-700 underline cursor-pointer block mt-3" id="toggleForm">
+        Don’t have an account? Create one
+      </span>
+
+      <p id="message" class="mt-3 text-sm"></p>
+    </div>
+  </main>
+
+  <!-- Firebase + EmailJS -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js";
+    import { 
+      getAuth, createUserWithEmailAndPassword, 
+      signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile
+    } from "https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDtuLZqaKo9MOGyh3jLDkq09Z8VF_25a0U",
+      authDomain: "a2korganics-1c96b.firebaseapp.com",
+      projectId: "a2korganics-1c96b",
+      storageBucket: "a2korganics-1c96b.firebasestorage.app",
+      messagingSenderId: "566638243916",
+      appId: "1:566638243916:web:d772b446922a539e87c4e9",
+      measurementId: "G-WBJG2TMT1K"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    const nameEl = document.getElementById("name");
+    const emailEl = document.getElementById("email");
+    const passwordEl = document.getElementById("password");
+    const confirmPasswordEl = document.getElementById("confirmPassword");
+    const messageEl = document.getElementById("message");
+    const formTitle = document.getElementById("form-title");
+    const authBtn = document.getElementById("authBtn");
+    const toggleForm = document.getElementById("toggleForm");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const userInfo = document.getElementById("userInfo");
+    const formBox = document.getElementById("formBox");
+
+    let isLogin = true;
+
+    // Toggle login/signup
+    toggleForm.addEventListener("click", () => {
+      formBox.classList.remove("slide-in");
+      formBox.classList.add(isLogin ? "slide-out-left" : "slide-out-right");
+
+      setTimeout(() => {
+        isLogin = !isLogin;
+        if (isLogin) {
+          formTitle.textContent = "Login";
+          authBtn.textContent = "Login";
+          toggleForm.textContent = "Don’t have an account? Create one";
+          confirmPasswordEl.style.display = "none";
+          nameEl.style.display = "none";
+        } else {
+          formTitle.textContent = "Create Account";
+          authBtn.textContent = "Signup";
+          toggleForm.textContent = "Already have an account? Login";
+          confirmPasswordEl.style.display = "block";
+          nameEl.style.display = "block";
+        }
+        messageEl.textContent = "";
+        formBox.classList.remove("slide-out-left", "slide-out-right");
+        formBox.classList.add("slide-in");
+      }, 400);
+    });
+
+    // Auth
+    authBtn.addEventListener("click", async () => {
+      try {
+        if (!emailEl.value || !passwordEl.value) {
+          messageEl.textContent = "⚠️ Please fill all fields.";
+          messageEl.style.color = "red"; return;
+        }
+        if (!isLogin && passwordEl.value !== confirmPasswordEl.value) {
+          messageEl.textContent = "⚠️ Passwords do not match.";
+          messageEl.style.color = "red"; return;
+        }
+
+        if (isLogin) {
+          await signInWithEmailAndPassword(auth, emailEl.value, passwordEl.value);
+          messageEl.textContent = "✅ Login successful!";
+          messageEl.style.color = "green";
+          setTimeout(() => window.location.href = "index.html", 1000);
+        } else {
+          // Create account
+          const userCred = await createUserWithEmailAndPassword(auth, emailEl.value, passwordEl.value);
+
+          // Update profile with name
+          await updateProfile(userCred.user, { displayName: nameEl.value });
+
+          // Send email notification to admin using EmailJS
+          emailjs.send("mIqSCJG42nY9rUpKhB79J", "template_1jq4xvr", {
+            name: nameEl.value,
+            email: emailEl.value
+          });
+
+          messageEl.textContent = "✅ Account created! Redirecting...";
+          messageEl.style.color = "green";
+          setTimeout(() => window.location.href = "index.html", 1200);
+        }
+      } catch (error) {
+        let msg = "";
+        if (error.code === "auth/email-already-in-use") msg = "⚠️ Email already registered.";
+        else if (error.code === "auth/wrong-password") msg = "⚠️ Incorrect password.";
+        else if (error.code === "auth/user-not-found") msg = "⚠️ No account found.";
+        else if (error.code === "auth/invalid-email") msg = "⚠️ Invalid email format.";
+        else msg = "❌ " + error.message;
+        messageEl.textContent = msg;
+        messageEl.style.color = "red";
+      }
+    });
+
+    // Logout
+    logoutBtn.addEventListener("click", async () => {
+      await signOut(auth);
+      window.location.href = "auth.html";
+    });
+
+    // Show user info in header
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        logoutBtn.style.display = "inline-block";
+        userInfo.style.display = "inline-block";
+        userInfo.textContent = "👤 " + (user.displayName || user.email);
+      } else {
+        logoutBtn.style.display = "none";
+        userInfo.style.display = "none";
+      }
+    });
+  </script>
+</body>
+</html>
