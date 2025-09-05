@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard - a2korganics</title>
+  <link rel="icon" type="image/png" href="favicon-32x32.png">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { margin: 0; font-family: Arial, sans-serif; background: #f7f9fc; }
+    header { background: #064420; color: #fff; padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; }
+    header h1 { margin: 0; font-size: 20px; }
+    .logout-btn { background: #ff4d4d; border: none; padding: 8px 14px; color: #fff; border-radius: 5px; cursor: pointer; }
+    .logout-btn:hover { background: #cc0000; }
+    .container { display: flex; }
+    .sidebar { width: 220px; background: #064420; color: white; height: 100vh; padding-top: 20px; position: fixed; top: 0; left: 0; overflow-y: auto; transition: transform 0.3s ease; }
+    .sidebar a { display: block; color: white; padding: 12px 20px; text-decoration: none; font-weight: bold; }
+    .sidebar a:hover { background: #04613a; }
+    .main { margin-left: 220px; padding: 20px; width: 100%; }
+    .hidden { display: none; }
+    .hamburger { display: none; font-size: 22px; cursor: pointer; background: none; border: none; color: #fff; }
+    @media (max-width: 768px) {
+      .sidebar { transform: translateX(-100%); }
+      .sidebar.active { transform: translateX(0); }
+      .main { margin-left: 0; }
+      .hamburger { display: block; }
+    }
+    .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
+    input, textarea, select, button { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ddd; border-radius: 6px; }
+    button { background: #064420; color: white; font-weight: bold; cursor: pointer; }
+    button:hover { background: #04613a; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #ddd; padding: 10px; text-align: center; }
+    th { background: #f1f1f1; }
+    .product-card { background: #f9f9f9; padding: 12px; border-radius: 8px; margin: 10px 0; }
+    .product-card img { max-width: 100px; border-radius: 5px; margin: 5px; }
+  </style>
+</head>
+<body>
+
+  <!-- Login -->
+  <div class="card" id="loginPage" style="max-width:400px; margin:80px auto;">
+    <h2 style="text-align:center;">Admin Login</h2>
+    <input type="text" id="username" placeholder="Username">
+    <input type="password" id="password" placeholder="Password">
+    <button onclick="login()">Login</button>
+    <p id="loginError" style="color:red;text-align:center;"></p>
+  </div>
+
+  <!-- Dashboard -->
+  <div id="dashboardSection" style="display:none;">
+    <header>
+      <button class="hamburger" onclick="toggleSidebar()">☰</button>
+      <h1>Admin Dashboard</h1>
+      <button class="logout-btn" onclick="logout()">Logout</button>
+    </header>
+
+    <div class="container">
+      <div class="sidebar" id="sidebar">
+        <a href="#" onclick="showSection('products')">Products</a>
+        <a href="#" onclick="showSection('orders')">Orders</a>
+        <a href="#" onclick="showSection('users')">Users</a>
+        <a href="#" onclick="showSection('analytics')">Analytics</a>
+        <a href="#" onclick="showSection('settings')">Settings</a>
+      </div>
+
+      <div class="main">
+        <!-- Products -->
+        <div id="products" class="section card">
+          <h2>Manage Products</h2>
+          <input type="hidden" id="editProductId"> <!-- For editing -->
+          <input type="text" id="searchProduct" placeholder="Search products..." onkeyup="loadProducts()">
+          <input type="text" id="productName" placeholder="Product Name">
+          <textarea id="productDescription" placeholder="Product Description"></textarea>
+          <input type="number" id="productPrice" placeholder="Product Price">
+          <input type="file" id="productImages" accept="image/*" multiple>
+          <button onclick="saveProduct()">Save Product</button>
+          <div id="productList"></div>
+        </div>
+
+        <!-- Orders -->
+        <div id="orders" class="section card hidden">
+          <h2>Orders</h2>
+          <table>
+            <tr><th>ID</th><th>Customer</th><th>Total</th><th>Status</th><th>Action</th></tr>
+            <tr><td>#001</td><td>John Doe</td><td>$120</td>
+              <td><select><option>Pending</option><option>Shipped</option></select></td>
+              <td><button>Update</button></td></tr>
+          </table>
+        </div>
+
+        <!-- Users -->
+        <div id="users" class="section card hidden">
+          <h2>Users</h2>
+          <table>
+            <tr><th>ID</th><th>Name</th><th>Status</th><th>Action</th></tr>
+            <tr><td>U001</td><td>Alice</td><td>Active</td><td><button>Block</button></td></tr>
+          </table>
+        </div>
+
+        <!-- Analytics -->
+        <div id="analytics" class="section card hidden">
+          <h2>Analytics</h2>
+          <canvas id="salesChart" height="120"></canvas>
+          <canvas id="revenueChart" height="120"></canvas>
+        </div>
+
+        <!-- Settings -->
+        <div id="settings" class="section card hidden">
+          <h2>Settings</h2>
+          <input type="text" placeholder="Change Username">
+          <input type="password" placeholder="Change Password">
+          <button>Save Changes</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<!-- ================= Firebase Integration ================= -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+  import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+  import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-storage.js";
+
+  // 🔹 Replace with your Firebase config
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "your-app.firebaseapp.com",
+    projectId: "your-app",
+    storageBucket: "your-app.appspot.com",
+    messagingSenderId: "123456789",
+    appId: "YOUR_APP_ID"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const storage = getStorage(app);
+
+  // ✅ Save Product (Add or Update)
+  async function saveProduct() {
+    let id = document.getElementById("editProductId").value;
+    let name = document.getElementById("productName").value;
+    let desc = document.getElementById("productDescription").value;
+    let price = document.getElementById("productPrice").value;
+    let images = document.getElementById("productImages").files;
+
+    if (!name || !desc || !price) return alert("Fill all fields");
+
+    let imageUrls = [];
+    if (images.length > 0) {
+      for (let i = 0; i < images.length; i++) {
+        const storageRef = ref(storage, 'products/' + Date.now() + '-' + images[i].name);
+        await uploadBytes(storageRef, images[i]);
+        const url = await getDownloadURL(storageRef);
+        imageUrls.push(url);
+      }
+    }
+
+    if (id) {
+      // 🔹 Update existing product
+      const productRef = doc(db, "products", id);
+      await updateDoc(productRef, {
+        name, description: desc, price,
+        ...(imageUrls.length > 0 && { images: imageUrls })
+      });
+      alert("✅ Product Updated!");
+    } else {
+      // 🔹 Add new product
+      await addDoc(collection(db, "products"), {
+        name, description: desc, price, images: imageUrls, createdAt: new Date()
+      });
+      alert("✅ Product Added!");
+    }
+
+    resetForm();
+    loadProducts();
+  }
+
+  // ✅ Load Products
+  async function loadProducts() {
+    let search = document.getElementById("searchProduct")?.value?.toLowerCase() || "";
+    let list = document.getElementById("productList");
+    list.innerHTML = "";
+
+    const querySnapshot = await getDocs(collection(db, "products"));
+    querySnapshot.forEach((docSnap) => {
+      let p = docSnap.data();
+      if (p.name.toLowerCase().includes(search)) {
+        let div = document.createElement("div");
+        div.className = "product-card";
+        div.innerHTML = `
+          <h4>${p.name}</h4>
+          <p>${p.description}</p>
+          <p><b>Price:</b> $${p.price}</p>
+          ${p.images?.map(img => `<img src=\"${img}\" alt=\"${p.name}\">`).join("")}
+          <button onclick=\"editProduct('${docSnap.id}', '${p.name}', '${p.description}', '${p.price}')\">Edit</button>
+          <button onclick=\"deleteProduct('${docSnap.id}')\">Delete</button>
+        `;
+        list.appendChild(div);
+      }
+    });
+  }
+
+  // ✅ Edit Product
+  window.editProduct = function(id, name, desc, price) {
+    document.getElementById("editProductId").value = id;
+    document.getElementById("productName").value = name;
+    document.getElementById("productDescription").value = desc;
+    document.getElementById("productPrice").value = price;
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  // ✅ Delete Product
+  window.deleteProduct = async function(id) {
+    await deleteDoc(doc(db, "products", id));
+    alert("❌ Product Deleted");
+    loadProducts();
+  };
+
+  function resetForm() {
+    document.getElementById("editProductId").value = "";
+    document.getElementById("productName").value = "";
+    document.getElementById("productDescription").value = "";
+    document.getElementById("productPrice").value = "";
+    document.getElementById("productImages").value = "";
+  }
+
+  // Expose to window
+  window.saveProduct = saveProduct;
+  window.loadProducts = loadProducts;
+</script>
+
+<script>
+  // Simple login (keep existing)
+  const ADMIN_USER = "a2korganics";
+  const ADMIN_PASS = "10101999";
+
+  function login() {
+    let user = document.getElementById("username").value;
+    let pass = document.getElementById("password").value;
+    if (user === ADMIN_USER && pass === ADMIN_PASS) {
+      document.getElementById("loginPage").style.display = "none";
+      document.getElementById("dashboardSection").style.display = "block";
+      loadProducts(); loadCharts();
+    } else {
+      document.getElementById("loginError").innerText = "Invalid credentials!";
+    }
+  }
+  function logout() {
+    document.getElementById("dashboardSection").style.display = "none";
+    document.getElementById("loginPage").style.display = "block";
+  }
+  function toggleSidebar() { document.getElementById("sidebar").classList.toggle("active"); }
+  function showSection(id) {
+    document.querySelectorAll(".section").forEach(s => s.classList.add("hidden"));
+    document.getElementById(id).classList.remove("hidden");
+  }
+  function loadCharts() {
+    new Chart(document.getElementById("salesChart"), {
+      type: "line",
+      data: { labels: ["Jan","Feb","Mar","Apr","May"],
+        datasets:[{ label:"Sales", data:[30,50,40,60,80], borderColor:"#064420", fill:false }]
+      }
+    });
+    new Chart(document.getElementById("revenueChart"), {
+      type: "bar",
+      data: { labels: ["Jan","Feb","Mar","Apr","May"],
+        datasets:[{ label:"Revenue", data:[300,500,400,600,800], backgroundColor:"#04613a" }]
+      }
+    });
+  }
+</script>
+
+</body>
+</html>
